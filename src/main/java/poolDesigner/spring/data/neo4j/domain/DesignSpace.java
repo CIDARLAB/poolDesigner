@@ -176,6 +176,20 @@ public class DesignSpace {
 		return createTypedNode(NodeType.START.getValue());
 	}
 	
+	public boolean deleteEdges(Set<Edge> deletedEdges) {
+		boolean isDeleted = false;
+		
+		if (hasNodes()) {
+			for (Node node : nodes) {
+				if (node.deleteEdges(deletedEdges)) {
+					isDeleted = true;
+				}
+			}
+    	}
+		
+		return isDeleted;
+	}
+	
 	public boolean deleteNodes(Set<Node> deletedNodes) {
 		if (hasNodes()) {
     		return nodes.removeAll(deletedNodes);

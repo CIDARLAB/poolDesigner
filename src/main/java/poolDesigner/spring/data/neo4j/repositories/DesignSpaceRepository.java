@@ -69,19 +69,21 @@ public interface DesignSpaceRepository extends GraphRepository<DesignSpace> {
 			+ "RETURN n.nodeID")
 	Set<String> getNodeIDs(@Param("targetSpaceID") String targetSpaceID);
 	
-	@Query("MATCH (target:DesignSpace {spaceID: {targetSpaceID}})-[:CONTAINS]->(n:Node) "
-			+ "RETURN count(n)")
-	Integer getNumNodes(@Param("targetSpaceID") String targetSpaceID);
+//	@Query("MATCH (target:DesignSpace {spaceID: {targetSpaceID}})-[:CONTAINS]->(n:Node) "
+//			+ "RETURN count(n)")
+//	Integer getNumNodes(@Param("targetSpaceID") String targetSpaceID);
 	
 	@Query("MATCH (d:DesignSpace) "
 			+ "RETURN d.spaceID")
 	Set<String> getDesignSpaceIDs();
 	
-	@Query("MATCH (target:DesignSpace)-[:CONTAINS]->(n:Node) "
-			+ "WITH target, count(n) AS size "
-			+ "WHERE size >= {targetSize} "
-			+ "RETURN target.spaceID")
-	ArrayList<String> getDesignSpaceIDsLargerThan(@Param("targetSize") int targetSize);
+	@Query("MATCH (target:DesignSpace {spaceID: {targetSpaceID}})-[:CONTAINS]->(n:Node) "
+			+ "WITH target, count(n) AS targetSize "
+			+ "MATCH (other:DesignSpace)-[:CONTAINS]->(n:Node) "
+			+ "WITH target, other, targetSize, count(n) AS otherSize "
+			+ "WHERE otherSize >= targetSize AND NOT target.spaceID = other.spaceID "
+			+ "RETURN other.spaceID")
+	ArrayList<String> getDesignSpaceIDsLargerThan(@Param("targetSpaceID") String targetSpaceID);
 	
 	@Query("MATCH (target:DesignSpace)-[:CONTAINS]->(n:Node)-[e:PRECEDES]->(m:Node)<-[:CONTAINS]-(target:DesignSpace) "
 			+ "WHERE target.spaceID = {targetSpaceID} AND has(e.componentIDs) "
@@ -94,7 +96,7 @@ public interface DesignSpaceRepository extends GraphRepository<DesignSpace> {
 	@Query("MATCH (target:DesignSpace)-[:CONTAINS]->(n:Node)-[e:PRECEDES]->(m:Node)<-[:CONTAINS]-(target:DesignSpace) "
 			+ "WHERE target.spaceID = {targetSpaceID} AND has(e.componentRoles) "
 			+ "WITH COLLECT(e) AS es "
-			+ "WITH reduce(output = [], e IN es | output + e.componentRoless) AS compRoles "
+			+ "WITH reduce(output = [], e IN es | output + e.componentRoles) AS compRoles "
 			+ "UNWIND compRoles AS compRole "
 			+ "RETURN compRole")
 	Set<String> getComponentRoles(@Param("targetSpaceID") String targetSpaceID);
