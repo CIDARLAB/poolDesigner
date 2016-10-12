@@ -69,23 +69,34 @@ public interface DesignSpaceRepository extends GraphRepository<DesignSpace> {
 			+ "RETURN n.nodeID")
 	Set<String> getNodeIDs(@Param("targetSpaceID") String targetSpaceID);
 	
+	@Query("MATCH (target:DesignSpace {spaceID: {targetSpaceID}})-[:CONTAINS]->(n:Node) "
+			+ "RETURN count(n)")
+	Integer getNumNodes(@Param("targetSpaceID") String targetSpaceID);
+	
 	@Query("MATCH (d:DesignSpace) "
 			+ "RETURN d.spaceID")
 	Set<String> getDesignSpaceIDs();
 	
 	@Query("MATCH (target:DesignSpace)-[:CONTAINS]->(n:Node) "
-			+ "WHERE count(n) >= size "
+			+ "WITH target, count(n) AS size "
+			+ "WHERE size >= {targetSize} "
 			+ "RETURN target.spaceID")
-	Set<String> getDesignSpaceIDsBySize(@Param("size") int size);
+	ArrayList<String> getDesignSpaceIDsLargerThan(@Param("targetSize") int targetSize);
 	
-	@Query("MATCH (target:DesignSpace)-[:CONTAINS]->(n:Node)-[e:PRECEDES]->(m:Node)<-[:CONTAINS]-(target:DesignSpace)"
+	@Query("MATCH (target:DesignSpace)-[:CONTAINS]->(n:Node)-[e:PRECEDES]->(m:Node)<-[:CONTAINS]-(target:DesignSpace) "
 			+ "WHERE target.spaceID = {targetSpaceID} AND has(e.componentIDs) "
-			+ "RETURN e.componentIDs")
+			+ "WITH COLLECT(e) AS es "
+			+ "WITH reduce(output = [], e IN es | output + e.componentIDs) AS compIDs "
+			+ "UNWIND compIDs AS compID "
+			+ "RETURN compID")
 	Set<String> getComponentIDs(@Param("targetSpaceID") String targetSpaceID);
 	
-	@Query("MATCH (target:DesignSpace)-[:CONTAINS]->(n:Node)-[e:PRECEDES]->(m:Node)<-[:CONTAINS]-(target:DesignSpace)"
+	@Query("MATCH (target:DesignSpace)-[:CONTAINS]->(n:Node)-[e:PRECEDES]->(m:Node)<-[:CONTAINS]-(target:DesignSpace) "
 			+ "WHERE target.spaceID = {targetSpaceID} AND has(e.componentRoles) "
-			+ "RETURN e.componentRoles")
+			+ "WITH COLLECT(e) AS es "
+			+ "WITH reduce(output = [], e IN es | output + e.componentRoless) AS compRoles "
+			+ "UNWIND compRoles AS compRole "
+			+ "RETURN compRole")
 	Set<String> getComponentRoles(@Param("targetSpaceID") String targetSpaceID);
 	
 	@Query("MATCH (target:DesignSpace)-[:CONTAINS]->(m:Node)-[e:PRECEDES]->(n:Node)<-[:CONTAINS]-(target:DesignSpace) "

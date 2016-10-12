@@ -30,7 +30,7 @@ function poolDesignerCtrl($scope) {
     };
 
     $scope.createSpecNode = function() {
-         $scope.specNodes.push(new $scope.specNode("[promoter][ribozyme][ribosome_entry_site][CDS][terminator]"));
+         $scope.specNodes.push(new $scope.specNode("[promoter][ribosome_entry_site][CDS][terminator]"));
     }
 
     $scope.removeNode = function(node) {
@@ -48,23 +48,21 @@ function poolDesignerCtrl($scope) {
             console.log(poolSpecs[i]);
         }
 
+        console.log(JSON.stringify(poolSpecs));
+
         d3.json("/design/pool").post(JSON.stringify(poolSpecs),
             function(error, result) {
                 if (error) {
-                    sweetAlert("Error", JSON.parse(error.response).message, "error");
+                    sweetAlert("Error", error.target.response, "error");
                 } else {
                     var pool;
 
-                    var i, j;
+                    var i;
 
                     for (i = 0; i < result.length; i++) {
                         pool = JSON.stringify(result[i]);
 
-                        console.log(pool);
-
-                        $scope.poolNodes[i] = new $scope.poolNode(pool.substring(1, pool.length - 1).replace(/\"/g, ""));
-
-                        console.log($scope.poolNodes[i].pool);
+                        $scope.poolNodes[i] = new $scope.poolNode(pool.substring(1, pool.length - 1));
                     }
                 }
             }

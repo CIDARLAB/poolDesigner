@@ -3,7 +3,6 @@ package poolDesigner.spring.data.neo4j.services;
 import poolDesigner.spring.data.neo4j.domain.DesignSpace;
 import poolDesigner.spring.data.neo4j.domain.Edge;
 import poolDesigner.spring.data.neo4j.domain.Node;
-import poolDesigner.spring.data.neo4j.domain.Node.NodeType;
 import poolDesigner.spring.data.neo4j.exception.DesignSpaceBranchesConflictException;
 import poolDesigner.spring.data.neo4j.exception.DesignSpaceConflictException;
 import poolDesigner.spring.data.neo4j.exception.DesignSpaceNotFoundException;
@@ -49,49 +48,101 @@ public class DesignSpaceService {
 	
     private Pattern subPoolPattern = Pattern.compile("(?:\\w|\\s)+");
     
-    public static final String RESERVED_ID = "poolDesigner";
+    public static final String RESERVED_PREFIX = "poolDesigner";
     
     public static final String REVERSE_PREFIX = "r__";
     
     public List<String> designPools(List<String> poolSpecs) throws DesignSpaceNotFoundException {
-    	List<String> pools = new ArrayList<String>(poolSpecs.size());
+    	HashMap<String, List<String>> specIDToConstructIDs = new HashMap<String, List<String>>();
     	
-    	for (String poolSpec : poolSpecs) {
-    		DesignSpace specSpace = convertPoolToDesignSpace(poolSpec, RESERVED_ID);
+    	int maxNumConstructs = 0;
+    	
+    	int minNumConstructs = -1;
+    	
+    	List<String> specIDs = new ArrayList<String>(poolSpecs.size());
+    	
+    	System.out.println("converting " + poolSpecs.size());
+    	
+    	for (int i = 0; i < poolSpecs.size(); i++) {
+    		System.out.println(i + 1);
     		
-    		saveDesignSpace(specSpace);
+    		String specID = RESERVED_PREFIX + "S" + i;
     		
-    		List<String> constructIDs = new LinkedList<String>(getDesignSpaceIDsBySize(specSpace.getNumNodes()));
+    		convertPoolToDesignSpace(poolSpecs.get(i), specID);
     		
-    		Set<String> matchIDs = matchDesignSpace(specSpace.getSpaceID(), constructIDs, RESERVED_ID);
+    		specIDs.add(specID);
     		
-    		deleteDesignSpace(RESERVED_ID);
+    		List<String> constructIDs = getDesignSpaceIDsLargerThan(getNumNodes(specID).intValue());
+
+    		if (constructIDs.size() > maxNumConstructs) {
+    			maxNumConstructs = constructIDs.size();
+    		}
+
+    		if (minNumConstructs < 0 || constructIDs.size() < minNumConstructs) {
+    			minNumConstructs = constructIDs.size();
+    		}
+
+    		specIDToConstructIDs.put(specID, constructIDs);
+    	}
+    	
+    	List<List<DesignSpace>> allMatchSpaces;
+    	
+    	if (minNumConstructs == maxNumConstructs) {
+    		if (specIDs.size() > 0) {
+    			System.out.println("matching " + specIDs.size() + " by " + specIDToConstructIDs.get(specIDs.get(0)).size());
+    			
+    			allMatchSpaces = matchDesignSpaces(specIDs, specIDToConstructIDs.get(specIDs.get(0)),
+    					RESERVED_PREFIX + "M");
+    		} else {
+    			allMatchSpaces = new ArrayList<List<DesignSpace>>(0);
+    		}
+    	} else {
+    		allMatchSpaces = new ArrayList<List<DesignSpace>>(specIDs.size());
     		
-    		List<String> completeMatchIDs = new LinkedList<String>();
+    		for (String specID : specIDs) {
+    			allMatchSpaces.add(matchDesignSpace(specID, specIDToConstructIDs.get(specID),
+    					RESERVED_PREFIX + "M"));
+    		}
+    	}
+    	
+    	System.out.println("merging " + allMatchSpaces.size());
+    	
+    	int k = 0;
+    	
+    	List<DesignSpace> mergedSpaces = new ArrayList<DesignSpace>(allMatchSpaces.size());
+
+    	for (List<DesignSpace> matchSpaces : allMatchSpaces) {
+    		k++;
+    		System.out.println(k);
     		
-    		for (String matchID : matchIDs) {
-    			if (hasNodes(matchID)) {
-    				if (hasReverseComponents(matchID)) {
-    					reverseDesignSpace(matchID);
-    				}
-    				
-    				completeMatchIDs.add(matchID);
-    			} else {
-    				deleteDesignSpace(matchID);
-    			}
+    		List<DesignSpace> completeMatches = new LinkedList<DesignSpace>();
+    		
+    		for (DesignSpace matchSpace : matchSpaces) {
+    			if (matchSpace.getNumNodes() > 0) {
+        			if (matchSpace.hasReverseComponents()) {
+        				matchSpace.reverseComplement();
+        			}
+
+        			completeMatches.add(matchSpace);
+        		}
     		}
     		
-    		mergeDesignSpaces(completeMatchIDs, RESERVED_ID, false, false, 2, 0);
+    		mergeDesignSpaces(false, false, 2, 0, completeMatches);
     		
-    		for (String matchSpaceID : completeMatchIDs) {
-    			deleteDesignSpace(matchSpaceID);
-    		}
+    		mergedSpaces.add(completeMatches.get(0));
+    	}
+    	
+    	List<String> pools = new ArrayList<String>(mergedSpaces.size());
+ 
+    	System.out.println("final conversion " + mergedSpaces.size());
+    	
+    	k = 0;
+    	
+    	for (DesignSpace mergedSpace : mergedSpaces) {
+    		k++;
+    		System.out.println(k);
     		
-    		DesignSpace poolSpace = loadDesignSpace(RESERVED_ID, 2);
-    		
-    		pools.add(convertDesignSpaceToPool(poolSpace));
-    		
-    		deleteDesignSpace(RESERVED_ID);
+    		pools.add(convertDesignSpaceToPool(mergedSpace));
     	}
     	
     	return pools;
@@ -153,40 +204,6 @@ public class DesignSpaceService {
     	designSpaceRepository.deleteDesignSpace(targetSpaceID);
     }
     
-    private void reverseDesignSpace(String inputSpaceID) {
-    	DesignSpace inputSpace = loadDesignSpace(inputSpaceID, 2);
-    	
-    	if (inputSpace.hasNodes()) {
-    		for (Node node : inputSpace.getNodes()) {
-    			if (node.isAcceptNode()) {
-    				node.setNodeType(NodeType.START.getValue());
-    			} else if (node.isStartNode()) {
-    				node.setNodeType(NodeType.ACCEPT.getValue());
-    			}
-    			
-    			if (node.hasEdges()) {
-    				for (Edge edge : node.getEdges()) {
-    					Node temp = edge.getHead();
-    					
-    					edge.setHead(edge.getTail());
-    					
-    					edge.setTail(temp);
-    					
-    					for (String compID : edge.getComponentIDs()) {
-    						if (compID.startsWith(REVERSE_PREFIX)) {
-    							compID = compID.substring(REVERSE_PREFIX.length());
-    						} else {
-    							compID = REVERSE_PREFIX + compID;
-    						}
-    					}
-    				}
-    			}
-    		}
-    	}
-    	
-    	saveDesignSpace(inputSpace);
-    }
-    
     private String convertDesignSpaceToPool(DesignSpace space) {
     	String pool = "";
     	
@@ -235,12 +252,12 @@ public class DesignSpaceService {
     	return pool;
     }
     
-    private DesignSpace convertPoolToDesignSpace(String poolSpec, String outputSpaceID)
+    private void convertPoolToDesignSpace(String poolSpec, String spaceID)
     		throws DesignSpaceNotFoundException {
-    	DesignSpace space = new DesignSpace(outputSpaceID);
-    	
-    	Node currentNode = space.createStartNode();
-    	
+    	ArrayList<ArrayList<String>> allCompIDs = new ArrayList<ArrayList<String>>();
+		
+		ArrayList<ArrayList<String>> allCompRoles = new ArrayList<ArrayList<String>>();
+		
     	Matcher subPoolMatcher = poolPattern.matcher(poolSpec);
 		
 		while (subPoolMatcher.find()) {
@@ -250,22 +267,16 @@ public class DesignSpaceService {
 				String partID = partMatcher.group(0);
 				
 				if (hasDesignSpace(partID)) {
-					Node nextNode = space.createNode();
-
-					currentNode.createEdge(nextNode, 
-							new ArrayList<String>(getComponentIDs(partID)), 
-							new ArrayList<String>(getComponentRoles(partID)));
-
-					currentNode = nextNode;
+					allCompIDs.add(new ArrayList<String>(getComponentIDs(partID)));
+					
+					allCompRoles.add(new ArrayList<String>(getComponentRoles(partID)));
 				} else {
 					throw new DesignSpaceNotFoundException(partID);
 				}
 			}
-			
-			currentNode.setNodeType(NodeType.ACCEPT.getValue());
 		}
 		
-		return space;
+		createDesignSpace(spaceID, allCompIDs, allCompRoles);
     }
     
     private void convertComponentDefinitionToDesignSpace(ComponentDefinition compDef) {
@@ -400,6 +411,10 @@ public class DesignSpaceService {
     	flattenComponentDefinition(rootDef, leafDefs, areLeavesForward, true);
     }
     
+    private Integer getNumNodes(String targetSpaceID) {
+    	return designSpaceRepository.getNumNodes(targetSpaceID);
+    }
+    
     private Set<String> getComponentIDs(String targetSpaceID) {
     	return designSpaceRepository.getComponentIDs(targetSpaceID);
     }
@@ -412,8 +427,8 @@ public class DesignSpaceService {
     	return designSpaceRepository.getDesignSpaceIDs();
     }
     
-    private Set<String> getDesignSpaceIDsBySize(int size) {
-    	return designSpaceRepository.getDesignSpaceIDsBySize(size);
+    private ArrayList<String> getDesignSpaceIDsLargerThan(int targetSize) {
+    	return designSpaceRepository.getDesignSpaceIDsLargerThan(targetSize);
     }
     
     private Set<ComponentDefinition> getDNAComponentDefinitions(SBOLDocument sbolDoc) {
@@ -502,30 +517,50 @@ public class DesignSpaceService {
     	return true;
     }
     
-    private Set<String> matchDesignSpace(String inputSpaceID1, List<String> inputSpaceIDs2, String outputSpacePrefix) {
-    	Set<String> outputSpaceIDs = new HashSet<String>();
+    private List<DesignSpace> matchDesignSpace(String querySpaceID, List<String> queriedSpaceIDs, String outputSpacePrefix) {
+    	List<String> querySpaceIDs = new ArrayList<String>(1);
     	
-    	for (int i = 0; i < inputSpaceIDs2.size(); i++) {
-        	List<String> inputSpaceIDs = new ArrayList<String>(1);
-        	
-        	inputSpaceIDs.add(inputSpaceIDs2.get(i));
-        	
-        	String outputSpaceID = outputSpacePrefix + i;
-
-        	unionDesignSpaces(inputSpaceIDs, outputSpaceID);
-
-        	List<String> inputSpaceIDs1 = new ArrayList<String>(2);
-
-        	inputSpaceIDs1.add(outputSpaceID);
-
-        	inputSpaceIDs1.add(inputSpaceID1);
-
-        	mergeDesignSpaces(inputSpaceIDs1, true, true, 1, 1);
-        	
-        	outputSpaceIDs.add(outputSpaceID);
-        }
+    	querySpaceIDs.add(querySpaceID);
     	
-    	return outputSpaceIDs;
+    	return matchDesignSpaces(querySpaceIDs, queriedSpaceIDs, outputSpacePrefix).get(0);
+    }
+    
+    private List<List<DesignSpace>> matchDesignSpaces(List<String> querySpaceIDs, List<String> queriedSpaceIDs, String outputSpacePrefix) {
+    	List<DesignSpace> querySpaces = new ArrayList<DesignSpace>(querySpaceIDs.size());
+    	
+    	for (String querySpaceID : querySpaceIDs) {
+    		querySpaces.add(loadDesignSpace(querySpaceID, 2));
+    	}
+    	
+    	List<DesignSpace> queriedSpaces = new ArrayList<DesignSpace>(queriedSpaceIDs.size());
+    	
+    	for (String queriedSpaceID : queriedSpaceIDs) {
+    		queriedSpaces.add(loadDesignSpace(queriedSpaceID, 2));
+    	}
+    	
+    	List<List<DesignSpace>> allOutputSpaces = new ArrayList<List<DesignSpace>>(querySpaces.size());
+    	
+    	for (int i = 0; i < querySpaces.size(); i++) {
+    		allOutputSpaces.add(new ArrayList<DesignSpace>(queriedSpaces.size()));
+    		
+    		for (int j = 0; j < queriedSpaces.size(); j++) {
+    			System.out.println(i + 1 + ", " + j + 1);
+
+    			DesignSpace outputSpace = queriedSpaces.get(j).copy(outputSpacePrefix + j);
+
+    			List<DesignSpace> inputSpaces = new ArrayList<DesignSpace>(2);
+
+    			inputSpaces.add(outputSpace);
+
+    			inputSpaces.add(querySpaces.get(i));
+
+    			mergeDesignSpaces(true, true, 1, 1, inputSpaces);
+
+    			allOutputSpaces.get(i).add(outputSpace);
+    		}
+    	}
+    	
+    	return allOutputSpaces;
     }
     
     private void mergeDesignSpaces(List<String> inputSpaceIDs, boolean isIntersection, boolean isCompleteMatch,
@@ -535,6 +570,87 @@ public class DesignSpaceService {
     	validateListParameter("inputSpaceIDs", inputSpaceIDs);
     	
     	mergeDesignSpaces(inputSpaceIDs, inputSpaceIDs.get(0), isIntersection, isCompleteMatch, strength, degree);
+    }
+    
+    private void mergeDesignSpaces(boolean isIntersection, boolean isCompleteMatch,
+    		int strength, int degree, List<DesignSpace> inputSpaces) {
+    	mergeDesignSpaces(inputSpaces, inputSpaces.get(0), isIntersection, isCompleteMatch, strength, degree);
+    }
+    
+    private void mergeDesignSpaces(List<DesignSpace> inputSpaces, DesignSpace outputSpace, boolean isIntersection, 
+    		boolean isCompleteMatch, int strength, int degree) {
+    	if (isIntersection) {
+    		boolean isDiffDeleted = false;
+
+    		for (DesignSpace inputSpace : inputSpaces) {
+    			List<Node> inputStarts = new LinkedList<Node>();
+    			
+    			List<Node> outputStarts = new LinkedList<Node>();
+    			
+    			if (degree >= 1) {
+    				if (degree == 2) {
+    					if (inputSpace.hasNodes()) {
+    						inputStarts.addAll(inputSpace.getNodes());
+    					}
+    				} else {
+        				inputStarts.addAll(inputSpace.getStartNodes());
+    				}
+    			
+    				if (outputSpace.hasNodes()) {
+    					outputStarts.addAll(outputSpace.getNodes());
+    				}
+    			} else {
+    				inputStarts.addAll(inputSpace.getStartNodes());
+    				
+    				outputStarts.addAll(outputSpace.getStartNodes());
+    			}
+    			
+    			SpaceDiff diff = mergeNodeSpaces(inputStarts, outputStarts, inputSpace, outputSpace, 
+    					isIntersection, isCompleteMatch, strength);
+    			
+    			if (!isDiffDeleted && inputSpaces.contains(outputSpace)) {
+    				deleteEdges(diff.getEdges());
+    				
+    				deleteNodes(diff.getNodes());
+    				
+    				isDiffDeleted = true;
+    			}
+    		}
+    	} else {
+    		int k = 0;
+    		
+    		for (DesignSpace inputSpace : inputSpaces) {
+    			List<Node> inputStarts = new LinkedList<Node>();
+    			
+    			List<Node> outputStarts = new LinkedList<Node>();
+    			
+    			if (degree >= 1) {
+    				if (degree == 2) {
+    					if (inputSpace.hasNodes()) {
+    						inputStarts.addAll(inputSpace.getNodes());
+    					}
+    				} else {
+        				inputStarts.addAll(inputSpace.getStartNodes());
+    				}
+    			
+    				if (outputSpace.hasNodes()) {
+    					outputStarts.addAll(outputSpace.getNodes());
+    				}
+    			} else {
+    				inputStarts.addAll(inputSpace.getStartNodes());
+    				
+    				outputStarts.addAll(outputSpace.getStartNodes());
+    			}
+    			
+    			if (!isCompleteMatch) {
+    				k++;
+
+    				System.out.println(k);
+    			}
+    			
+    			mergeNodeSpaces(inputStarts, outputStarts, inputSpace, outputSpace, isIntersection, isCompleteMatch, strength);
+    		}
+    	}
     }
     
     private void mergeDesignSpaces(List<String> inputSpaceIDs, String outputSpaceID, boolean isIntersection, 
@@ -562,87 +678,16 @@ public class DesignSpaceService {
         		prunedSpaces.add(loadDesignSpace(inputSpaceID, 2));
         	}
     	} else {
-    		int maxMergeIndex = 0;
-
     		for (String inputSpaceID : prunedSpaceIDs) {
     			DesignSpace inputSpace = loadDesignSpace(inputSpaceID, 2);
     			
     			prunedSpaces.add(inputSpace);
     		}
 
-    		outputSpace = new DesignSpace(outputSpaceID, 0, maxMergeIndex);
+    		outputSpace = new DesignSpace(outputSpaceID, 0);
     	}
     	
-    	if (isIntersection) {
-    		boolean isDiffDeleted = false;
-
-    		for (DesignSpace inputSpace : prunedSpaces) {
-    			List<Node> inputStarts = new LinkedList<Node>();
-    			
-    			List<Node> outputStarts = new LinkedList<Node>();
-    			
-    			if (degree >= 1) {
-    				if (degree == 2) {
-    					if (inputSpace.hasNodes()) {
-    						inputStarts.addAll(inputSpace.getNodes());
-    					}
-    				} else {
-        				inputStarts.addAll(inputSpace.getStartNodes());
-    				}
-    			
-    				if (outputSpace.hasNodes()) {
-    					outputStarts.addAll(outputSpace.getNodes());
-    				}
-    			} else {
-    				inputStarts.addAll(inputSpace.getStartNodes());
-    				
-    				outputStarts.addAll(outputSpace.getStartNodes());
-    			}
-    			
-    			SpaceDiff diff = mergeNodeSpaces(inputStarts, outputStarts, inputSpace, outputSpace, 
-    					isIntersection, isCompleteMatch, strength);
-    			
-    			if (!isDiffDeleted && inputSpaceIDs.contains(outputSpaceID)) {
-    				deleteEdges(diff.getEdges());
-    				
-    				deleteNodes(diff.getNodes());
-    				
-    				isDiffDeleted = true;
-    			}
-    		}
-    	} else {
-    		for (DesignSpace inputSpace : prunedSpaces) {
-    			List<Node> inputStarts = new LinkedList<Node>();
-    			
-    			List<Node> outputStarts = new LinkedList<Node>();
-    			
-    			if (degree >= 1) {
-    				if (degree == 2) {
-    					if (inputSpace.hasNodes()) {
-    						inputStarts.addAll(inputSpace.getNodes());
-    					}
-    				} else {
-        				inputStarts.addAll(inputSpace.getStartNodes());
-    				}
-    			
-    				if (outputSpace.hasNodes()) {
-    					outputStarts.addAll(outputSpace.getNodes());
-    				}
-    			} else {
-    				inputStarts.addAll(inputSpace.getStartNodes());
-    				
-    				outputStarts.addAll(outputSpace.getStartNodes());
-    			}
-    			
-    			mergeNodeSpaces(inputStarts, outputStarts, inputSpace, outputSpace, isIntersection, isCompleteMatch, strength);
-    		}
-    	}
-  
-    	saveDesignSpace(outputSpace);
-    	
-    	if (inputSpaceIDs.contains(outputSpaceID)) {
-    		prunedSpaces.add(0, outputSpace);
-    	}
+    	mergeDesignSpaces(prunedSpaces, outputSpace, isIntersection, isCompleteMatch, strength, degree);
     }
     
     private Node mergeNodes(Node inputNode, Node outputNode, DesignSpace outputSpace, 

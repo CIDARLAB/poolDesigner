@@ -7,6 +7,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import poolDesigner.spring.data.neo4j.domain.Node.NodeType;
+import poolDesigner.spring.data.neo4j.services.DesignSpaceService;
 
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.voodoodyne.jackson.jsog.JSOGGenerator;
@@ -33,7 +34,7 @@ public class DesignSpace {
     	this.spaceID = spaceID;
     }
     
-    public DesignSpace(String spaceID, int idIndex, int mergeIndex) {
+    public DesignSpace(String spaceID, int idIndex) {
     	this.spaceID = spaceID;
     	this.idIndex = idIndex;
     }
@@ -89,6 +90,30 @@ public class DesignSpace {
 		Set<Node> removedNodes = nodes;
 		nodes.clear();
 		return removedNodes;
+	}
+	
+	public DesignSpace copy(String copyID) {
+		DesignSpace spaceCopy = new DesignSpace(copyID, idIndex);
+		
+		if (hasNodes()) {
+			HashMap<String, Node> idToNodeCopy = new HashMap<String, Node>();
+
+			for (Node node : nodes) {
+				idToNodeCopy.put(node.getNodeID(), spaceCopy.copyNodeWithID(node));
+			}
+
+			for (Node node : nodes) {
+				if (node.hasEdges()) {
+					Node nodeCopy = idToNodeCopy.get(node.getNodeID());
+					
+					for (Edge edge : node.getEdges()) {
+						nodeCopy.copyEdge(edge, idToNodeCopy.get(edge.getHead().getNodeID()));
+					}
+				} 
+			}
+		}
+		
+		return spaceCopy;
 	}
 	
 	public Node copyNodeWithEdges(Node node) {
@@ -308,6 +333,26 @@ public class DesignSpace {
     	}
     }
     
+    public boolean hasReverseComponents() {
+    	if (hasNodes()) {
+    		for (Node node : nodes) {
+    			if (node.hasEdges()) {
+    				for (Edge edge : node.getEdges()) {
+    					if (edge.hasComponentIDs()) {
+    						for (String compID : edge.getComponentIDs()) {
+    							if (compID.startsWith(DesignSpaceService.REVERSE_PREFIX)) {
+    								return true;
+    							}
+    						}
+    					}
+    				}
+    			}
+    		}
+    	}
+    	
+    	return false;
+    }
+    
     public HashMap<String, Set<Edge>> mapNodeIDsToIncomingEdges() {
     	HashMap<String, Set<Edge>> nodeIDToIncomingEdges = new HashMap<String, Set<Edge>>();
 		if (hasNodes()) {
@@ -404,6 +449,36 @@ public class DesignSpace {
     	}
     	
     	return diffEdges;
+    }
+    
+    public void reverseComplement() {
+    	if (hasNodes()) {
+    		for (Node node : nodes) {
+    			if (node.isAcceptNode()) {
+    				node.setNodeType(NodeType.START.getValue());
+    			} else if (node.isStartNode()) {
+    				node.setNodeType(NodeType.ACCEPT.getValue());
+    			}
+    			
+    			if (node.hasEdges()) {
+    				for (Edge edge : node.getEdges()) {
+    					Node temp = edge.getHead();
+    					
+    					edge.setHead(edge.getTail());
+    					
+    					edge.setTail(temp);
+    					
+    					for (String compID : edge.getComponentIDs()) {
+    						if (compID.startsWith(DesignSpaceService.REVERSE_PREFIX)) {
+    							compID = compID.substring(DesignSpaceService.REVERSE_PREFIX.length());
+    						} else {
+    							compID = DesignSpaceService.REVERSE_PREFIX + compID;
+    						}
+    					}
+    				}
+    			}
+    		}
+    	}
     }
     
     public void setIDIndex(int idIndex) {
