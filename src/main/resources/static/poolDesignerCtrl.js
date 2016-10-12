@@ -8,17 +8,19 @@ function poolDesignerCtrl($scope) {
     $scope.specNode = function(pool) {
         this.pool = pool;
         this.labelColor = "";
+        this.labelTxt = "Pool Structure";
         this.backgroundColor = "";
     };
 
     $scope.poolNode = function(pool) {
         this.pool = pool;
         this.labelColor = "color:#ffffff";
+        this.labelTxt = "Pool";
         this.backgroundColor = "background-color:#787878";
     };
 
-    $scope.moveSpecNodeToTop = function(node) {
-        if (node.labelcolor.length > 0) {
+    $scope.moveNodeToTop = function(node) {
+        if (node.labelColor.length > 0) {
             $scope.poolNodes.splice($scope.specNodes.indexOf(node), 1);
 
             $scope.poolNodes.unshift(node);
@@ -29,8 +31,14 @@ function poolDesignerCtrl($scope) {
         }
     };
 
+    $scope.poolTreeOptions = {
+        accept: function(sourceNodeScope, destNodesScope, destIndex) {
+            return destNodesScope.$id === sourceNodeScope.$parentNodesScope.$id;
+        }
+    };
+
     $scope.createSpecNode = function() {
-         $scope.specNodes.push(new $scope.specNode("[promoter][ribosome_entry_site][CDS][terminator]"));
+         $scope.specNodes.push(new $scope.specNode("[scar][promoter][RBS][CDS][terminator][scar]"));
     }
 
     $scope.removeNode = function(node) {
@@ -44,27 +52,21 @@ function poolDesignerCtrl($scope) {
 
         for (i = 0; i < $scope.specNodes.length; i++) {
             poolSpecs[i] = $scope.specNodes[i].pool;
-
-            console.log(poolSpecs[i]);
         }
-
-        console.log(JSON.stringify(poolSpecs));
 
         d3.json("/design/pool").post(JSON.stringify(poolSpecs),
             function(error, result) {
-                if (error) {
-                    sweetAlert("Error", error.target.response, "error");
-                } else {
-                    var pool;
+                $scope.$apply(function () {
+                    if (error) {
+                        sweetAlert("Error", error.target.response, "error");
+                    } else {
+                        var i;
 
-                    var i;
-
-                    for (i = 0; i < result.length; i++) {
-                        pool = JSON.stringify(result[i]);
-
-                        $scope.poolNodes[i] = new $scope.poolNode(pool.substring(1, pool.length - 1));
+                        for (i = 0; i < result.length; i++) {
+                            $scope.poolNodes[i] = new $scope.poolNode(result[i]);
+                        }
                     }
-                }
+                });
             }
         );
     }

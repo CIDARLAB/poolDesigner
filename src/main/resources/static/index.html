@@ -55,18 +55,18 @@
         </nav>
 
         <div class="container">
-            <div class="row">
+            <div class="row" style="margin:25px">
                 <div class="col-sm-12 col-md-12">
-                    <div ui-tree="">
+                    <div ui-tree="poolTreeOptions">
                         <ol ui-tree-nodes="" ng-model="specNodes">
                             <li ng-repeat="node in specNodes" ui-tree-node ng-include="'pool_spec_renderer.html'"></li>
                         </ol>
                     </div>
                 </div>
             </div>
-            <div class="row">
+            <div class="row" style="margin:25px">
                 <div class="col-sm-12 col-md-12">
-                     <div ui-tree="">
+                     <div ui-tree="poolTreeOptions">
                         <ol ui-tree-nodes="" ng-model="poolNodes">
                             <li ng-repeat="node in poolNodes" ui-tree-node ng-include="'pool_spec_renderer.html'"></li>
                         </ol>
@@ -90,8 +90,8 @@
                 <div class="tree-node-content">
                     <a class="pull-right btn btn-danger btn-xs" data-nodrag ng-click="removeNode(this)"><span class="glyphicon glyphicon-remove"></span></a>
                     <a class="pull-right btn btn-primary btn-xs" data-nodrag ng-click="moveNodeToTop(node)"><span class="glyphicon glyphicon-arrow-up"></span></a>
-                    <label style="{{node.labelColor}}">Pool Structure</label><br>
-                    <input type="text" style="height:25px" ng-model="node.pool">   
+                    <label style="{{node.labelColor}}">{{node.labelTxt}}</label><br>
+                    <input type="text" style="height:25px;width:500px" ng-model="node.pool">   
                 </div>
             </div>
         </script>

@@ -87,6 +87,8 @@ public class DesignSpaceService {
     	
     	List<List<DesignSpace>> allMatchSpaces;
     	
+    	System.out.println("min " + minNumConstructs + "max " + maxNumConstructs);
+    	
     	if (minNumConstructs == maxNumConstructs) {
     		if (specIDs.size() > 0) {
     			System.out.println("matching " + specIDs.size() + " by " + specIDToConstructIDs.get(specIDs.get(0)).size());
@@ -270,7 +272,7 @@ public class DesignSpaceService {
 			Matcher partMatcher = subPoolPattern.matcher(subPoolMatcher.group(0));
 			
 			while (partMatcher.find()) {
-				String partID = partMatcher.group(0);
+				String partID = convertSOAbbreviationToName(partMatcher.group(0));
 				
 				if (hasDesignSpace(partID)) {
 					allCompIDs.add(new ArrayList<String>(getComponentIDs(partID)));
@@ -461,6 +463,7 @@ public class DesignSpaceService {
     
     private ArrayList<String> convertSOIdentifiersToNames(Set<URI> soIdentifiers) {
     	ArrayList<String> roleNames= new ArrayList<String>();
+    	
 		if (soIdentifiers.size() == 0) {
 			roleNames.add("sequence_feature");
 		} else {
@@ -488,7 +491,18 @@ public class DesignSpaceService {
 		    	}
 			}
 		}
+		
     	return roleNames;
+    }
+    
+    private String convertSOAbbreviationToName(String abbreviation) {
+    	if (abbreviation.equals("RBS")) {
+    		return "ribosome_entry_site";
+    	} else if (abbreviation.equals("scar")) {
+    		return "restriction_enzyme_assembly_scar";
+    	} else {
+    		return abbreviation;
+    	}
     }
     
     private int getStartOfSequenceAnnotation(SequenceAnnotation seqAnno) {
@@ -550,8 +564,8 @@ public class DesignSpaceService {
     	System.out.println("loading " + queriedSpaceIDs.size());
     	
     	for (String queriedSpaceID : queriedSpaceIDs) {
-    		k++;
-    		System.out.println(k);
+//    		k++;
+//    		System.out.println(k);
     		
     		queriedSpaces.add(loadDesignSpace(queriedSpaceID, 2));
     	}
