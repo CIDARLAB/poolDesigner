@@ -6,6 +6,8 @@ import java.util.Set;
 
 import org.neo4j.ogm.annotation.*;
 
+import poolDesigner.spring.data.neo4j.services.DesignSpaceService;
+
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.voodoodyne.jackson.jsog.JSOGGenerator;
 
@@ -94,6 +96,10 @@ public class Edge {
     
     public ArrayList<String> getComponentIDs() {
     	return componentIDs;
+    }
+    
+    public String getComponentID(int i) {
+    	return componentIDs.get(i);
     }
     
     public ArrayList<String> getComponentRoles() {
@@ -229,6 +235,28 @@ public class Edge {
     
     public boolean isCyclic() {
     	return tail.equals(head);
+    }
+    
+    public void reverseComplement() {
+    	Node temp = head;
+		
+		head = tail;
+		
+		tail = temp;
+		
+		if (hasComponentIDs()) {
+			ArrayList<String> reverseComponentIDs = new ArrayList<String>(componentIDs.size());
+
+			for (String compID : componentIDs) {
+				if (compID.startsWith(DesignSpaceService.REVERSE_PREFIX)) {
+					reverseComponentIDs.add(compID.substring(DesignSpaceService.REVERSE_PREFIX.length()));
+				} else {
+					reverseComponentIDs.add(DesignSpaceService.REVERSE_PREFIX + compID);
+				}
+			}
+			
+			this.componentIDs = reverseComponentIDs;
+		}
     }
     
     public void setHead(Node head) {

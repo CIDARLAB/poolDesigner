@@ -48,12 +48,12 @@ public class PoolDesignerApplication extends WebMvcConfigurerAdapter {
     @Autowired
     DesignSpaceService designSpaceService;
     
-    @RequestMapping(value = "/delete/all", method = RequestMethod.POST)
+    @ResponseBody @RequestMapping(value = "/delete/all", method = RequestMethod.POST)
     public ResponseEntity<String> deleteAll() {
     	designSpaceService.deleteAll();
     	
-    	return new ResponseEntity<String>("{\"message\": \"Database was successfully cleared.\"}", 
-    			HttpStatus.NO_CONTENT);
+    	return new ResponseEntity<String>("\"Database was successfully cleared.\"", 
+    			HttpStatus.OK);
     }
     
     @ResponseBody @RequestMapping(value = "/design/pool", method = RequestMethod.POST)
@@ -66,17 +66,13 @@ public class PoolDesignerApplication extends WebMvcConfigurerAdapter {
 			return new ResponseEntity<String>(mapper.writeValueAsString(designSpaceService.designPools(poolSpecs)), 
 					HttpStatus.OK);
 		} catch (JsonParseException ex) {
-			return new ResponseEntity<String>("{\"message\": \"" + ex.getMessage() + "\"}", 
-    				HttpStatus.BAD_REQUEST);
+			return new ResponseEntity<String>(ex.getMessage(), HttpStatus.BAD_REQUEST);
 		} catch (JsonMappingException ex) {
-			return new ResponseEntity<String>("{\"message\": \"" + ex.getMessage() + "\"}", 
-    				HttpStatus.BAD_REQUEST);
+			return new ResponseEntity<String>(ex.getMessage(), HttpStatus.BAD_REQUEST);
 		} catch (IOException ex) {
-			return new ResponseEntity<String>("{\"message\": \"" + ex.getMessage() + "\"}", 
-    				HttpStatus.BAD_REQUEST);
+			return new ResponseEntity<String>(ex.getMessage(), HttpStatus.BAD_REQUEST);
 		} catch (DesignSpaceNotFoundException ex) {
-			return new ResponseEntity<String>("{\"message\": \"" + ex.getMessage() + "\"}", 
-    				HttpStatus.BAD_REQUEST);
+			return new ResponseEntity<String>(ex.getMessage(), HttpStatus.BAD_REQUEST);
 		}
     }
     

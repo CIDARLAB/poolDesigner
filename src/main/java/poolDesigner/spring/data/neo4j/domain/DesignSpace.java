@@ -467,6 +467,8 @@ public class DesignSpace {
     
     public void reverseComplement() {
     	if (hasNodes()) {
+    		HashMap<String, Set<Edge>> nodeIDToEdges = new HashMap<String, Set<Edge>>();
+    		
     		for (Node node : nodes) {
     			if (node.isAcceptNode()) {
     				node.setNodeType(NodeType.START.getValue());
@@ -476,20 +478,22 @@ public class DesignSpace {
     			
     			if (node.hasEdges()) {
     				for (Edge edge : node.getEdges()) {
-    					Node temp = edge.getHead();
-    					
-    					edge.setHead(edge.getTail());
-    					
-    					edge.setTail(temp);
-    					
-    					for (String compID : edge.getComponentIDs()) {
-    						if (compID.startsWith(DesignSpaceService.REVERSE_PREFIX)) {
-    							compID = compID.substring(DesignSpaceService.REVERSE_PREFIX.length());
-    						} else {
-    							compID = DesignSpaceService.REVERSE_PREFIX + compID;
-    						}
+    					if (!nodeIDToEdges.containsKey(edge.getHead().getNodeID())) {
+    						nodeIDToEdges.put(edge.getHead().getNodeID(), new HashSet<Edge>());
     					}
+    					
+    					nodeIDToEdges.get(edge.getHead().getNodeID()).add(edge);
+    					
+    					edge.reverseComplement();
     				}
+    			}
+    		}
+    		
+    		for (Node node : nodes) {
+    			if (nodeIDToEdges.containsKey(node.getNodeID())) {
+    				node.setEdges(nodeIDToEdges.get(node.getNodeID()));
+    			} else {
+    				node.clearEdges();
     			}
     		}
     	}

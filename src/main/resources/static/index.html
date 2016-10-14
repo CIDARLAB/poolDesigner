@@ -28,7 +28,7 @@
                     <form class="navbar-form navbar-right">
                         <div class="input-group">
                             <div class="input-group-btn">
-                                <button type="button" class="btn btn-danger" ng-click="deleteAll()">Clear Data</button>
+                                <button type="button" class="btn btn-danger" ng-click="deleteAll()">Clear Database</button>
                             </div><!-- /btn-group -->
                         </div><!-- /input-group -->
                     </form>
@@ -50,6 +50,8 @@
                             </div><!-- /btn-group -->
                         </div><!-- /input-group -->
                     </form>
+                    <label for="rcBox">Include Reverse Complement: </label>
+                    <input id="rcBox" name="rcBox" type="checkbox" ng-model="isReverseIncluded.isChecked">
                 </div><!-- /.navbar-collapse -->
             </div><!-- /.container-fluid -->
         </nav>
@@ -88,10 +90,11 @@
         <script type="text/ng-template" id="pool_spec_renderer.html">
             <div ui-tree-handle class="tree-node" style="{{node.backgroundColor}}">
                 <div class="tree-node-content">
+                    <a class="btn btn-success btn-xs" ng-show="{{node.labelColor.length > 0}}" data-nodrag ng-click="togglePoolNode(node)"><span class="glyphicon" ng-class="{'glyphicon-chevron-right': collapsed, 'glyphicon-chevron-down': !collapsed}"></span></a>
                     <a class="pull-right btn btn-danger btn-xs" data-nodrag ng-click="removeNode(this)"><span class="glyphicon glyphicon-remove"></span></a>
                     <a class="pull-right btn btn-primary btn-xs" data-nodrag ng-click="moveNodeToTop(node)"><span class="glyphicon glyphicon-arrow-up"></span></a>
                     <label style="{{node.labelColor}}">{{node.labelTxt}}</label><br>
-                    <input type="text" style="height:25px;width:500px" ng-model="node.pool">   
+                    <input type="text" style="{{node.txtDim}}" ng-disabled="{{node.labelColor.length > 0}}" ng-model="node.pool">   
                 </div>
             </div>
         </script>

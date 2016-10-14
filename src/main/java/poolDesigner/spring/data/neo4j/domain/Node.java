@@ -43,6 +43,12 @@ public class Node {
     	edges.add(edge);
     }
     
+    public void clearEdges() {
+    	if (hasEdges()) {
+    		edges.clear();
+    	}
+    }
+    
     public Edge copyEdge(Edge edge) {
     	if (edge.hasComponentIDs() && edge.hasComponentRoles()) {
     		return createEdge(edge.getHead(), new ArrayList<String>(edge.getComponentIDs()), new ArrayList<String>(edge.getComponentRoles()));
@@ -173,6 +179,10 @@ public class Node {
     	} else {
     		return false;
     	}
+    }
+    
+    public void setEdges(Set<Edge> edges) {
+    	this.edges = edges;
     }
     
     public enum NodeType {
