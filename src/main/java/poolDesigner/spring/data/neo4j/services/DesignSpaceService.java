@@ -44,13 +44,13 @@ public class DesignSpaceService {
     @Autowired EdgeRepository edgeRepository;
     @Autowired NodeRepository nodeRepository;
     
-    private Pattern poolPattern = Pattern.compile("\\[(?:\\{r\\})?(?:\\w|\\s)+(?:,(?:\\{r\\})?(?:\\w|\\s)+)*\\]");
+    private static final String POOL_PATTERN = "\\[(?:r\\^)?(?:\\w|\\s)+(?:,(?:r\\^)?(?:\\w|\\s)+)*\\]";
 	
-    private Pattern subPoolPattern = Pattern.compile("(?:\\{r\\})?(?:\\w|\\s)+");
+    private static final String SUB_POOL_PATTERN = "(?:r\\^)?(?:\\w|\\s)+";
     
     public static final String RESERVED_PREFIX = "poolDesigner";
     
-    public static final String REVERSE_PREFIX = "{r}";
+    public static final String REVERSE_PREFIX = "r^";
     
     public List<String> designPools(List<String> poolSpecs) throws DesignSpaceNotFoundException {
     	List<String> specIDs = new ArrayList<String>(poolSpecs.size());
@@ -243,10 +243,10 @@ public class DesignSpaceService {
 		
 		ArrayList<ArrayList<String>> allCompRoles = new ArrayList<ArrayList<String>>();
 		
-    	Matcher subPoolMatcher = poolPattern.matcher(poolSpec);
+    	Matcher subPoolMatcher = Pattern.compile(POOL_PATTERN).matcher(poolSpec);
 		
 		while (subPoolMatcher.find()) {
-			Matcher partMatcher = subPoolPattern.matcher(subPoolMatcher.group(0));
+			Matcher partMatcher = Pattern.compile(SUB_POOL_PATTERN).matcher(subPoolMatcher.group(0));
 			
 			ArrayList<String> compIDs = new ArrayList<String>();
 			

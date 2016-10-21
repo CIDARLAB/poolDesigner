@@ -1,4 +1,4 @@
-= Knox - A Genetic Design Space Repository
+= PoolDesigner - Designing Multiplexed Pools for Assembling Library Constructs
 
 == Quickstart
 

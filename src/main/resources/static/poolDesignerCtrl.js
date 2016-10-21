@@ -45,8 +45,8 @@ function poolDesignerCtrl($scope) {
                 for (j = 0; j < poolArr[i].length; j++) {
                     shortPoolArr[i][j] = poolArr[i][j].trim().slice(Math.max(poolArr[i][j].lastIndexOf("/"), poolArr[i][j].lastIndexOf("#"), poolArr[i][j].lastIndexOf(":")) + 1);
                 
-                    if (poolArr[i][j].startsWith("{r}")) {
-                        shortPoolArr[i][j] = "{r}" + shortPoolArr[i][j];
+                    if (poolArr[i][j].startsWith("r^")) {
+                        shortPoolArr[i][j] = "r^" + shortPoolArr[i][j];
                     }
                 }
             }
@@ -108,10 +108,10 @@ function poolDesignerCtrl($scope) {
 
             for (i = poolArr.length - 1; i >= 0; i--) {
                 for (j = 0; j < subArrLengths[i]; j++) {
-                    if (poolArr[i][j].startsWith("{r}")) {
+                    if (poolArr[i][j].startsWith("r^")) {
                         poolArr[poolArr.length - 1 - i].push(poolArr[i][j].slice(3));
                     } else {
-                        poolArr[poolArr.length - 1 - i].push("{r}" + poolArr[i][j]);
+                        poolArr[poolArr.length - 1 - i].push("r^" + poolArr[i][j]);
                     }
                 }
             }
