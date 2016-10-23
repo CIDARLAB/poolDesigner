@@ -17,8 +17,38 @@ function poolDesignerCtrl($scope) {
         this.backgroundColor = "";
     };
 
+    $scope.SpecNode.prototype.parsePool = function() {
+        return JSON.parse("[" + this.pool.replace(/\[/g, "[\"").replace(/\]/g, "\"]").replace(/,/g, "\",\"").replace(/\]\[/g, "],[") + "]");
+    };
+
     $scope.SpecNode.prototype.removeWhiteSpace = function() {
         this.pool = this.pool.replace(/\s+/g, "");
+    };
+
+    $scope.SpecNode.prototype.reversePool = function() {
+        var poolArr = this.parsePool();
+
+        var subArrLengths = [];
+
+        var i, j;
+
+        for (i = poolArr.length - 1; i >= 0; i--) {
+            subArrLengths[i] = poolArr[i].length;
+        }
+
+        for (i = poolArr.length - 1; i >= 0; i--) {
+            for (j = 0; j < subArrLengths[i]; j++) {
+                if (poolArr[i][j].startsWith("r^")) {
+                    poolArr[poolArr.length - 1 - i].push(poolArr[i][j].slice(3));
+                } else {
+                    poolArr[poolArr.length - 1 - i].push("r^" + poolArr[i][j]);
+                }
+            }
+        }
+
+        var poolWithReverse = JSON.stringify(poolArr);
+
+        return poolWithReverse.slice(1, poolWithReverse.length - 1).replace(/\[\"/g, "[").replace(/\"\]/g, "]").replace(/\",\"/g, ",").replace(/\],\[/g, "][");
     };
 
     $scope.PoolNode = function(pool) {
@@ -30,10 +60,13 @@ function poolDesignerCtrl($scope) {
         this.backgroundColor = "background-color:#787878";
     };
 
+    $scope.PoolNode.prototype.parsePool = function() {
+        return JSON.parse("[" + this.pool.replace(/\[/g, "[\"").replace(/\]/g, "\"]").replace(/,/g, "\",\"").replace(/\]\[/g, "],[") + "]");
+    };
+
     $scope.PoolNode.prototype.togglePool = function() {
         if (this.pool === this.altPool) {
-            var poolArr = JSON.parse("[" + this.pool.replace(/\[/g, "[\"").replace(/\]/g, "\"]").replace(/,/g, "\",\"").replace(/\]\[/g, "],[") 
-                    + "]");
+            var poolArr = this.parsePool();
 
             var shortPoolArr = [];
 
@@ -94,33 +127,6 @@ function poolDesignerCtrl($scope) {
     };
 
     $scope.designPools = function() {
-        var includeReverse = function(pool) {
-            var poolArr = JSON.parse("[" + pool.replace(/\[/g, "[\"").replace(/\]/g, "\"]").replace(/,/g, "\",\"").replace(/\]\[/g, "],[") 
-                    + "]");
-
-            var subArrLengths = [];
-
-            var i, j;
-
-            for (i = poolArr.length - 1; i >= 0; i--) {
-                subArrLengths[i] = poolArr[i].length;
-            }
-
-            for (i = poolArr.length - 1; i >= 0; i--) {
-                for (j = 0; j < subArrLengths[i]; j++) {
-                    if (poolArr[i][j].startsWith("r^")) {
-                        poolArr[poolArr.length - 1 - i].push(poolArr[i][j].slice(3));
-                    } else {
-                        poolArr[poolArr.length - 1 - i].push("r^" + poolArr[i][j]);
-                    }
-                }
-            }
-
-            var poolWithReverse = JSON.stringify(poolArr);
-
-            return poolWithReverse.slice(1, poolWithReverse.length - 1).replace(/\[\"/g, "[").replace(/\"\]/g, "]").replace(/\",\"/g, ",").replace(/\],\[/g, "][");
-        };
-
         var poolSpecs = [];
 
         var i;
@@ -129,7 +135,7 @@ function poolDesignerCtrl($scope) {
             $scope.specNodes[i].removeWhiteSpace();
 
             if ($scope.isReverseIncluded.isChecked) {
-                poolSpecs[i] = includeReverse($scope.specNodes[i].pool);
+                poolSpecs[i] = $scope.specNodes[i].reversePool();
             } else {
                 poolSpecs[i] = $scope.specNodes[i].pool;
             }
@@ -144,9 +150,9 @@ function poolDesignerCtrl($scope) {
                         var i;
 
                         for (i = 0; i < result.length; i++) {
-                            $scope.poolNodes[i] = new $scope.PoolNode(result[i]);
+                            $scope.poolNodes.push(new $scope.PoolNode(result[i]));
 
-                            $scope.poolNodes[i].togglePool();
+                            $scope.poolNodes[$scope.poolNodes.length - 1].togglePool();
                         }
                     }
                 });
@@ -165,4 +171,33 @@ function poolDesignerCtrl($scope) {
         });
     };
 
+    $scope.downloadPools = function() {
+        var content = "";
+
+        var i;
+
+        for (i = 0; i < $scope.poolNodes.length; i++) {
+            content += $scope.poolNodes[i].pool;
+        }
+
+        content = content.replace(/\]\[/g, "\n").replace(/\[/g, "").replace(/\]/g, "");
+
+        var blob = new Blob([content]);
+
+        if (window.navigator.msSaveOrOpenBlob) {  // IE hack; see http://msdn.microsoft.com/en-us/library/ie/hh779016.aspx
+            window.navigator.msSaveBlob(blob, "pool_designs.csv");
+        } else {
+            var link = window.document.createElement("a");
+
+            link.href = window.URL.createObjectURL(blob, {type: "text/plain"});
+
+            link.download = "pool_designs.csv";
+
+            document.body.appendChild(link);
+
+            link.click();  // IE: "Access is denied"; see: https://connect.microsoft.com/IE/feedback/details/797361/ie-10-treats-blob-url-as-cross-origin-and-denies-access
+            
+            document.body.removeChild(link);
+        }
+    };
 }

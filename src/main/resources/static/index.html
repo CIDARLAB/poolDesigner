@@ -52,6 +52,13 @@
                     </form>
                     <label for="rcBox">Include Reverse Complement: </label>
                     <input id="rcBox" name="rcBox" type="checkbox" ng-model="isReverseIncluded.isChecked">
+                    <form class="navbar-form navbar-left">
+                        <div class="input-group">
+                            <div class="input-group-btn">
+                                <button type="button" class="btn btn-default" ng-click="downloadPools()">Download Pools</button>
+                            </div><!-- /btn-group -->
+                        </div><!-- /input-group -->
+                    </form>
                 </div><!-- /.navbar-collapse -->
             </div><!-- /.container-fluid -->
         </nav>
