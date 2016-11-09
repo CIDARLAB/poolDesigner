@@ -1,3 +1,28 @@
+/*Copyright (c) 2015, Nicholas Roehner
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification, are permitted provided 
+that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this list of conditions and 
+the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions 
+and the following disclaimer in the documentation and/or other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse 
+or promote products derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED 
+WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A 
+PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR 
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED 
+TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) 
+HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING 
+NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF 
+THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 package poolDesigner.spring.data.neo4j.repositories;
 
 import poolDesigner.spring.data.neo4j.domain.DesignSpace;
@@ -18,20 +43,6 @@ import java.util.Set;
  */
 @RepositoryRestResource(collectionResourceRel = "poolDesigner", path = "poolDesigner")
 public interface DesignSpaceRepository extends GraphRepository<DesignSpace> {
-//	@Query("MATCH (target:DesignSpace {spaceID: {targetSpaceID}})-[:CONTAINS]->(tail:Node {nodeID: 'n' + (target.idIndex - 1)}) "
-//			+ "CREATE (tail)-[:PRECEDES {componentIDs: {componentIDs}, componentRoles: {componentRoles}}]->(:Node {nodeID: 'n' + target.idIndex})<-[:CONTAINS]-(target) "
-//			+ "SET target.idIndex = target.idIndex + 1")
-//	void createComponentEdge(@Param("targetSpaceID") String targetSpaceID, @Param("componentIDs") ArrayList<String> componentIDs, @Param("componentRoles") ArrayList<String> componentRoles);
-	
-//	@Query("CREATE (:DesignSpace {spaceID: {outputSpaceID}, idIndex: 1})-[:CONTAINS]->(:Node {nodeID: 'n0', nodeType: 'start'})")
-//	void createDesignSpace(@Param("outputSpaceID") String outputSpaceID);
-	
-//	@Query("CREATE (output:DesignSpace {spaceID: {outputSpaceID}, idIndex: 2}) "
-//			+ "CREATE (output)-[:CONTAINS]->(m:Node {nodeID: 'n0', nodeType: 'start'}) "
-//			+ "CREATE (output)-[:CONTAINS]->(n:Node {nodeID: 'n1', nodeType: 'accept'}) "
-//			+ "CREATE (m)-[:PRECEDES {componentIDs: {componentIDs}, componentRoles: {componentRoles}}]->(n)")
-//	void createDesignSpace(@Param("outputSpaceID") String outputSpaceID, @Param("componentIDs") ArrayList<String> componentIDs, @Param("componentRoles") ArrayList<String> componentRoles);
-
 	@Query("CREATE (output:DesignSpace {spaceID: {outputSpaceID}, idIndex: size({allCompIDs}) + 1}) "
 			+ "WITH output "
 			+ "UNWIND range(0, size({allCompIDs})) AS i "
