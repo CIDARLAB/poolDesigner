@@ -143,6 +143,8 @@ public class DesignSpaceService {
     }
     
     public void importSBOL(Set<SBOLDocument> sbolDocs) {
+    	SequenceOntology so = new SequenceOntology();
+    	
     	Set<String> spaceIDs = getDesignSpaceIDs();
     	
     	for (SBOLDocument sbolDoc : sbolDocs) {
@@ -157,12 +159,12 @@ public class DesignSpaceService {
         		
         		if (compDef.getComponents().size() > 0) {;
         			if (!spaceIDs.contains(compID)) {
-        				convertComponentDefinitionToDesignSpace(compDef);
+        				convertComponentDefinitionToDesignSpace(compDef, so);
         				
         				spaceIDs.add(compID);
         			}
         		} else {
-        			ArrayList<String> compRoles = convertSOIdentifiersToNames(compDef.getRoles());
+        			ArrayList<String> compRoles = convertSOTermsToNames(compDef.getRoles(), so);
         			
         			if (compDef.getDisplayId() != null) {
             			createPartSpace(compDef.getDisplayId(), compID, compRoles, spaceIDs);
@@ -289,7 +291,8 @@ public class DesignSpaceService {
 		createDesignSpace(spaceID, allCompIDs, allCompRoles);
     }
     
-    private void convertComponentDefinitionToDesignSpace(ComponentDefinition compDef) {
+    private void convertComponentDefinitionToDesignSpace(ComponentDefinition compDef,
+    		SequenceOntology so) {
 		List<ComponentDefinition> leafDefs = new LinkedList<ComponentDefinition>();
 		
 		List<Boolean> areLeavesForward = new LinkedList<Boolean>();
@@ -309,7 +312,7 @@ public class DesignSpaceService {
 				compIDs.add(REVERSE_PREFIX + leafDefs.get(i).getPersistentIdentity().toString());
 			}
 
-			ArrayList<String> compRoles = new ArrayList<String>(convertSOIdentifiersToNames(leafDefs.get(i).getRoles()));
+			ArrayList<String> compRoles = new ArrayList<String>(convertSOTermsToNames(leafDefs.get(i).getRoles(), so));
 
 			allCompIDs.add(compIDs);
 			
@@ -463,34 +466,36 @@ public class DesignSpaceService {
     	}
     }
     
-    private ArrayList<String> convertSOIdentifiersToNames(Set<URI> soIdentifiers) {
+    private ArrayList<String> convertSOTermsToNames(Set<URI> soTerms,
+    		SequenceOntology so) {
     	ArrayList<String> roleNames= new ArrayList<String>();
     	
-		if (soIdentifiers.size() == 0) {
+		if (soTerms.size() == 0) {
 			roleNames.add("sequence_feature");
 		} else {
-			for (URI soIdentifier : soIdentifiers) {
-				if (soIdentifier.equals(SequenceOntology.PROMOTER)) {
-		    		roleNames.add("promoter");
-		    	} else if (soIdentifier.equals(SequenceOntology.type("SO:0000374"))) {
-		    		roleNames.add("ribozyme");
-		    	} else if (soIdentifier.equals(SequenceOntology.INSULATOR)) {
-		    		roleNames.add("insulator");
-		    	} else if (soIdentifier.equals(SequenceOntology.RIBOSOME_ENTRY_SITE)) {
-		    		roleNames.add("ribosome_entry_site");
-		    	} else if (soIdentifier.equals(SequenceOntology.CDS)) {
-		    		roleNames.add("CDS");
-		    	} else if (soIdentifier.equals(SequenceOntology.TERMINATOR)) {
-		    		roleNames.add("terminator");
-		    	} else if (soIdentifier.equals(SequenceOntology.type("SO:0001953"))) {
-		    		roleNames.add("restriction_enzyme_assembly_scar");
-		    	} else if (soIdentifier.equals(SequenceOntology.RESTRICTION_ENZYME_RECOGNITION_SITE)) {
-		    		roleNames.add("restriction_enzyme_recognition_site");
-		    	} else if (soIdentifier.equals(SequenceOntology.PRIMER_BINDING_SITE)) {
-		    		roleNames.add("primer_binding_site");
-		    	} else {
-		    		roleNames.add("sequence_feature");
-		    	}
+			for (URI soIdentifier : soTerms) {
+//				if (soIdentifier.equals(SequenceOntology.PROMOTER)) {
+//		    		roleNames.add("promoter");
+//		    	} else if (soIdentifier.equals(SequenceOntology.type("SO:0000374"))) {
+//		    		roleNames.add("ribozyme");
+//		    	} else if (soIdentifier.equals(SequenceOntology.INSULATOR)) {
+//		    		roleNames.add("insulator");
+//		    	} else if (soIdentifier.equals(SequenceOntology.RIBOSOME_ENTRY_SITE)) {
+//		    		roleNames.add("ribosome_entry_site");
+//		    	} else if (soIdentifier.equals(SequenceOntology.CDS)) {
+//		    		roleNames.add("CDS");
+//		    	} else if (soIdentifier.equals(SequenceOntology.TERMINATOR)) {
+//		    		roleNames.add("terminator");
+//		    	} else if (soIdentifier.equals(SequenceOntology.type("SO:0001953"))) {
+//		    		roleNames.add("restriction_enzyme_assembly_scar");
+//		    	} else if (soIdentifier.equals(SequenceOntology.RESTRICTION_ENZYME_RECOGNITION_SITE)) {
+//		    		roleNames.add("restriction_enzyme_recognition_site");
+//		    	} else if (soIdentifier.equals(SequenceOntology.PRIMER_BINDING_SITE)) {
+//		    		roleNames.add("primer_binding_site");
+//		    	} else {
+//		    		roleNames.add("sequence_feature");
+//		    	}
+				roleNames.add(so.getName(soIdentifier));
 			}
 		}
 		
